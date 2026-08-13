@@ -1,0 +1,20 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@/assets/*": [
+        "./assets/*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+, "src/app/index.tsx", "src/app/login.tsx", "src/app/select-region.tsx", "src/app/(tabs)/home.tsx", "src/app/(tabs)/_layout.tsx", "backend/routes/bus-admin/admin-over.js"  ]
+}
