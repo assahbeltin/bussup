@@ -33,7 +33,7 @@ export default function BookingsManagementScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
   const [expandedBookingId, setExpandedBookingId] = useState(null);
-  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
   // Manual User Registration Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -408,10 +408,10 @@ export default function BookingsManagementScreen() {
                     {booking.receiptImage && (
                       <TouchableOpacity
                         style={styles.viewProofBtn}
-                        onPress={() => setSelectedReceipt(booking.receiptImage)}
+                        onPress={() => setSelectedBooking(booking)}
                       >
                         <MaterialIcons name="image" size={14} color="#2563EB" />
-                        <Text style={styles.viewProofBtnText}>View Receipt Proof</Text>
+                        <Text style={styles.viewProofBtnText}>Review Receipt Proof</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -578,17 +578,32 @@ export default function BookingsManagementScreen() {
       </Modal>
 
       {/* Payment Receipt Image Modal */}
-      {selectedReceipt && (
+      {selectedBooking && (
         <Modal transparent visible animationType="fade">
           <View style={styles.receiptModalOverlay}>
             <View style={styles.receiptModalCard}>
               <View style={styles.receiptModalHeader}>
-                <Text style={styles.receiptModalTitle}>Payment Receipt Proof</Text>
-                <TouchableOpacity onPress={() => setSelectedReceipt(null)}>
+                <View>
+                  <Text style={styles.receiptModalTitle}>Payment Receipt Proof</Text>
+                  <Text style={styles.receiptModalSubTitle}>
+                    Ticket: {selectedBooking.ticketNo || selectedBooking.id} • Status: {selectedBooking.status}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedBooking(null)}>
                   <MaterialIcons name="close" size={24} color="#0F172A" />
                 </TouchableOpacity>
               </View>
-              <Image source={{ uri: selectedReceipt }} style={styles.fullReceiptImg} resizeMode="contain" />
+              <Image source={{ uri: selectedBooking.receiptImage }} style={styles.fullReceiptImg} resizeMode="contain" />
+
+              {selectedBooking.status !== 'Confirmed' && (
+                <TouchableOpacity
+                  style={styles.approveBtnModal}
+                  onPress={() => handleUpdateStatus(selectedBooking.id, 'Confirmed')}
+                >
+                  <MaterialIcons name="check-circle" size={18} color="#FFFFFF" />
+                  <Text style={styles.approveBtnModalText}>Approve & Confirm Payment</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </Modal>
@@ -682,5 +697,8 @@ const styles = StyleSheet.create({
   receiptModalCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, width: '100%', maxWidth: 480, maxHeight: '80%' },
   receiptModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   receiptModalTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  fullReceiptImg: { width: '100%', height: 360, borderRadius: 8 },
+  receiptModalSubTitle: { fontSize: 11, color: '#64748B', marginTop: 2 },
+  fullReceiptImg: { width: '100%', height: 300, borderRadius: 8 },
+  approveBtnModal: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#16A34A', paddingVertical: 12, borderRadius: 10, marginTop: 14, gap: 6 },
+  approveBtnModalText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 });

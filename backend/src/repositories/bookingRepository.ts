@@ -308,10 +308,11 @@ export class BookingRepository {
   }
 
   async updateStatus(id: string, status: BookingStatus): Promise<Booking | null> {
+    const paymentStatus = status === 'Confirmed' ? 'COMPLETED' : status === 'Cancelled' ? 'FAILED' : 'PENDING';
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .update({ status })
+        .update({ status, payment_status: paymentStatus })
         .or(`id.eq.${id},ticket_no.eq.${id}`)
         .select('*, passengers(*)')
         .maybeSingle();
@@ -351,7 +352,10 @@ export class BookingRepository {
         };
 
         const memBooking = memoryStore.bookings.find((b) => b.id === id || b.ticketNo === id);
-        if (memBooking) memBooking.status = status;
+        if (memBooking) {
+          memBooking.status = status;
+          memBooking.paymentStatus = paymentStatus;
+        }
         return updated;
       }
     } catch (err) {
@@ -361,6 +365,7 @@ export class BookingRepository {
     const booking = memoryStore.bookings.find((b) => b.id === id || b.ticketNo === id);
     if (!booking) return null;
     booking.status = status;
+    booking.paymentStatus = paymentStatus;
     return booking;
   }
 

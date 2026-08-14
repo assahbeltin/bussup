@@ -13,12 +13,13 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AdminLayout from './AdminLayout';
-import { getAdminDashboardApi } from '../../services/api';
+import { getAdminDashboardApi, updateBookingStatusApi } from '../../services/api';
+import { Alert, Platform } from 'react-native';
 
 export default function AdminOverviewScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState(null);
   const [kpis, setKpis] = useState({
     totalRevenueFormatted: '0 FCFA',
     activeBookingsCount: 0,
@@ -42,6 +43,25 @@ export default function AdminOverviewScreen() {
       }
     } else {
       setError(res.message || 'Failed to load dashboard statistics.');
+    }
+  };
+
+  const handleApproveBooking = async (id) => {
+    const res = await updateBookingStatusApi(id, 'Confirmed');
+    if (res.success) {
+      setSelectedBooking(null);
+      fetchDashboard();
+      if (Platform.OS === 'web') {
+        window.alert('Payment Confirmed! Receipt proof approved and printable ticket receipt enabled for user.');
+      } else {
+        Alert.alert('Payment Confirmed', 'The payment receipt image has been approved and confirmed. Printable ticket receipt is now enabled for the user!');
+      }
+    } else {
+      if (Platform.OS === 'web') {
+        window.alert(res.message || 'Could not confirm payment.');
+      } else {
+        Alert.alert('Update Failed', res.message || 'Could not confirm payment.');
+      }
     }
   };
 
@@ -172,10 +192,10 @@ export default function AdminOverviewScreen() {
                           {item.receiptImage && (
                             <TouchableOpacity
                               style={styles.receiptBadge}
-                              onPress={() => setSelectedReceipt(item.receiptImage)}
+                              onPress={() => setSelectedBooking(item)}
                             >
                               <MaterialIcons name="receipt-long" size={14} color="#2563EB" />
-                              <Text style={styles.receiptBadgeText}>Proof</Text>
+                              <Text style={styles.receiptBadgeText}>Review Proof</Text>
                             </TouchableOpacity>
                           )}
                         </View>
@@ -188,17 +208,32 @@ export default function AdminOverviewScreen() {
           )}
 
           {/* Receipt Proof Preview Modal */}
-          {selectedReceipt && (
+          {selectedBooking && (
             <Modal transparent visible animationType="fade">
               <View style={styles.modalOverlay}>
                 <View style={styles.modalCard}>
                   <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Payment Receipt Proof</Text>
-                    <TouchableOpacity onPress={() => setSelectedReceipt(null)}>
+                    <View>
+                      <Text style={styles.modalTitle}>Payment Receipt Proof</Text>
+                      <Text style={styles.modalSubTitle}>
+                        Ticket: {selectedBooking.ticketNo || selectedBooking.id} • Status: {selectedBooking.status}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setSelectedBooking(null)}>
                       <MaterialIcons name="close" size={24} color="#0F172A" />
                     </TouchableOpacity>
                   </View>
-                  <Image source={{ uri: selectedReceipt }} style={styles.fullReceiptImage} resizeMode="contain" />
+                  <Image source={{ uri: selectedBooking.receiptImage }} style={styles.fullReceiptImage} resizeMode="contain" />
+
+                  {selectedBooking.status !== 'Confirmed' && (
+                    <TouchableOpacity
+                      style={styles.approveBtn}
+                      onPress={() => handleApproveBooking(selectedBooking.id)}
+                    >
+                      <MaterialIcons name="check-circle" size={18} color="#FFFFFF" />
+                      <Text style={styles.approveBtnText}>Approve & Confirm Payment</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             </Modal>
@@ -255,5 +290,8 @@ const styles = StyleSheet.create({
   modalCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, width: '100%', maxWidth: 480, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   modalTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  fullReceiptImage: { width: '100%', height: 350, borderRadius: 8 },
+  modalSubTitle: { fontSize: 11, color: '#64748B', marginTop: 2 },
+  fullReceiptImage: { width: '100%', height: 300, borderRadius: 8 },
+  approveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#16A34A', paddingVertical: 12, borderRadius: 10, marginTop: 14, gap: 6 },
+  approveBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 });

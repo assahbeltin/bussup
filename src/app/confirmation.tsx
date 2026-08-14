@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { getMyBookingsApi } from "../services/api";
 
 export default function ConfirmationScreen() {
   const params = useLocalSearchParams<{
@@ -27,6 +28,7 @@ export default function ConfirmationScreen() {
     to?: string;
     totalAmount?: string;
     paymentMethod?: string;
+    status?: string;
     autoPrint?: string;
     journeyTime?: string;
   }>();
@@ -44,25 +46,60 @@ export default function ConfirmationScreen() {
   const pnrNumber = params.pnr || "PNR-" + Math.floor(100000 + Math.random() * 900000);
   const paymentMethod = params.paymentMethod || "MTN Mobile Money";
 
+  const [currentStatus, setCurrentStatus] = useState<string>(params.status || "Processing");
+
+  useEffect(() => {
+    let interval: any;
+    const checkStatus = async () => {
+      try {
+        const res = await getMyBookingsApi();
+        if (res && res.success && Array.isArray(res.data)) {
+          const match = res.data.find(
+            (b: any) => b.id === params.bookingId || b.ticketNo === params.pnr
+          );
+          if (match && match.status) {
+            setCurrentStatus(match.status);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    checkStatus();
+    interval = setInterval(checkStatus, 3000);
+    return () => clearInterval(interval);
+  }, [params.bookingId, params.pnr]);
+
+  const isConfirmed = currentStatus === "Confirmed";
+
   const handlePrint = () => {
+    if (!isConfirmed) {
+      Alert.alert(
+        "Admin Image Confirmation Required",
+        "Your payment receipt image is under review. The Admin must verify and confirm your payment before the receipt can be printed."
+      );
+      return;
+    }
+
     if (Platform.OS === "web" && typeof window !== "undefined") {
       window.print();
     } else {
       Alert.alert(
         "Download / Print Receipt",
-        `Receipt for ${passengerName} (${pnrNumber}) has been generated and ready for print/download.`
+        `Receipt for ${passengerName} (${pnrNumber}) has been generated and is ready for print/download.`
       );
     }
   };
 
   useEffect(() => {
-    if (params.autoPrint === "true") {
+    if (params.autoPrint === "true" && isConfirmed) {
       const timer = setTimeout(() => {
         handlePrint();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [params.autoPrint]);
+  }, [params.autoPrint, isConfirmed]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -90,22 +127,37 @@ export default function ConfirmationScreen() {
           <Text style={styles.headerSubtitle}>Official Ticket Receipt</Text>
         </View>
 
-        <TouchableOpacity style={styles.printHeaderBtn} onPress={handlePrint}>
+        <TouchableOpacity
+          style={[styles.printHeaderBtn, !isConfirmed && { opacity: 0.4 }]}
+          onPress={handlePrint}
+        >
           <Ionicons name="print-outline" size={20} color="#2563EB" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Success Banner */}
-        <View style={styles.successBanner}>
-          <View style={styles.checkIconBadge}>
-            <Ionicons name="checkmark" size={32} color="#FFFFFF" />
+        {/* Status Banner */}
+        {isConfirmed ? (
+          <View style={styles.successBanner}>
+            <View style={styles.checkIconBadge}>
+              <Ionicons name="checkmark" size={32} color="#FFFFFF" />
+            </View>
+            <Text style={styles.successTitle}>Payment Approved & Confirmed!</Text>
+            <Text style={styles.successSubtitle}>
+              The admin has verified your payment receipt. Your official ticket receipt is ready to print.
+            </Text>
           </View>
-          <Text style={styles.successTitle}>Payment Successful!</Text>
-          <Text style={styles.successSubtitle}>
-            Your bus reservation with {agencyName} has been confirmed.
-          </Text>
-        </View>
+        ) : (
+          <View style={styles.pendingBanner}>
+            <View style={styles.pendingIconBadge}>
+              <Ionicons name="time" size={32} color="#FFFFFF" />
+            </View>
+            <Text style={styles.pendingTitle}>Payment Proof Under Admin Review</Text>
+            <Text style={styles.pendingSubtitle}>
+              Your payment receipt image has been uploaded and sent to the Admin dashboard. Receipt printing will be enabled automatically as soon as the Admin approves your payment proof.
+            </Text>
+          </View>
+        )}
 
         {/* Official Ticket Receipt Card */}
         <View style={styles.ticketCard} id="printable-receipt">
@@ -180,7 +232,12 @@ export default function ConfirmationScreen() {
                 <Text style={styles.fieldLabel}>AMOUNT PAID</Text>
                 <Text style={styles.amountPaidValue}>{amountPaid}</Text>
               </View>
-              <View style={[styles.gridItem, { alignItems: "flex-end" }]} />
+              <View style={[styles.gridItem, { alignItems: "flex-end" }]}>
+                <Text style={styles.fieldLabel}>ADMIN APPROVAL STATUS</Text>
+                <Text style={[styles.statusBadgeText, isConfirmed ? styles.statusBadgeConfirmed : styles.statusBadgePending]}>
+                  {isConfirmed ? "Confirmed" : "Pending Image Review"}
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -196,11 +253,15 @@ export default function ConfirmationScreen() {
               <Text style={styles.qrSubtitle}>
                 Show this barcode to the driver at the terminal when boarding.
               </Text>
-              <Text style={styles.statusConfirmed}>STATUS: VERIFIED & CONFIRMED</Text>
+              {isConfirmed ? (
+                <Text style={styles.statusConfirmed}>STATUS: VERIFIED & CONFIRMED</Text>
+              ) : (
+                <Text style={styles.statusPending}>STATUS: PENDING ADMIN IMAGE CONFIRMATION</Text>
+              )}
             </View>
           </View>
 
-          {/* Warm Satisfying Welcome Message */}
+          {/* Welcome Message */}
           <View style={styles.welcomeBox}>
             <Ionicons name="heart" size={20} color="#E11D48" style={{ marginBottom: 4 }} />
             <Text style={styles.welcomeHeading}>Welcome Aboard!</Text>
@@ -212,9 +273,14 @@ export default function ConfirmationScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity style={styles.printMainBtn} onPress={handlePrint}>
-            <Ionicons name="print" size={18} color="#FFFFFF" />
-            <Text style={styles.printMainBtnText}>Print / Download Receipt</Text>
+          <TouchableOpacity
+            style={[styles.printMainBtn, !isConfirmed && styles.printMainBtnDisabled]}
+            onPress={handlePrint}
+          >
+            <Ionicons name={isConfirmed ? "print" : "lock-closed"} size={18} color="#FFFFFF" />
+            <Text style={styles.printMainBtnText}>
+              {isConfirmed ? "Print / Download Receipt" : "Print Locked (Awaiting Admin Image Approval)"}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -307,6 +373,67 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#64748B",
     textAlign: "center",
+  },
+  pendingBanner: {
+    alignItems: "center",
+    backgroundColor: "#FFFBEB",
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  pendingIconBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#F59E0B",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  pendingTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#92400E",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  pendingSubtitle: {
+    fontSize: 13,
+    color: "#B45309",
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    overflow: "hidden",
+  },
+  statusBadgeConfirmed: {
+    color: "#166534",
+    backgroundColor: "#DCFCE7",
+  },
+  statusBadgePending: {
+    color: "#92400E",
+    backgroundColor: "#FEF3C7",
+  },
+  statusPending: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#D97706",
+    letterSpacing: 0.5,
+  },
+  printMainBtnDisabled: {
+    backgroundColor: "#94A3B8",
+    shadowColor: "transparent",
   },
 
   // Ticket Receipt Card

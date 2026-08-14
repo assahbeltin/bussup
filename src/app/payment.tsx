@@ -151,7 +151,8 @@ export default function PaymentScreen() {
         bus: bookingData?.busId || tripId || "BUS-AM-101",
         seats: seats || "2D",
         paymentMethod: selectedMethod,
-        autoPrint: "true",
+        status: bookingData?.status || "Processing",
+        autoPrint: "false",
         journeyTime,
       },
     });
