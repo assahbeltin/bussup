@@ -107,9 +107,11 @@ export default function Signup() {
           style={styles.input}
           placeholder="John Doe"
           placeholderTextColor="#94A3B8"
+          autoCapitalize="words"
+          autoCorrect={false}
+          autoComplete="name"
           value={fullName}
-          onChangeText={setFullName}
-          editable={!loading}
+          onChangeText={(val) => setFullName(val)}
         />
       </View>
 
@@ -123,9 +125,10 @@ export default function Signup() {
           placeholderTextColor="#94A3B8"
           keyboardType="email-address"
           autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
           value={email}
-          onChangeText={setEmail}
-          editable={!loading}
+          onChangeText={(val) => setEmail(val)}
         />
       </View>
 
@@ -138,9 +141,10 @@ export default function Signup() {
           placeholder="+237 600-000-000"
           placeholderTextColor="#94A3B8"
           keyboardType="phone-pad"
+          autoCorrect={false}
+          autoComplete="tel"
           value={phone}
-          onChangeText={setPhone}
-          editable={!loading}
+          onChangeText={(val) => setPhone(val)}
         />
       </View>
 
@@ -153,11 +157,13 @@ export default function Signup() {
           placeholder="••••••••"
           placeholderTextColor="#94A3B8"
           secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="password"
           value={password}
-          onChangeText={setPassword}
-          editable={!loading}
+          onChangeText={(val) => setPassword(val)}
         />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
           <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={18} color="#64748B" />
         </TouchableOpacity>
       </View>
@@ -311,10 +317,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: "100%",
+    height: 48,
     color: "#0F172A",
     fontSize: 15,
     paddingVertical: 0,
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
   eyeIcon: {
     fontSize: 16,

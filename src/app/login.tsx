@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -63,7 +64,7 @@ export default function Login() {
     <ScrollView 
       contentContainerStyle={styles.scrollContainer}
       showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
+      keyboardShouldPersistTaps="always"
     >
       <View style={styles.container}>
         {/* App Header & Logo */}
@@ -98,9 +99,10 @@ export default function Login() {
             placeholderTextColor="#94A3B8"
             keyboardType="email-address"
             autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
             value={email}
-            onChangeText={setEmail}
-            editable={!loading}
+            onChangeText={(text) => setEmail(text)}
           />
         </View>
 
@@ -120,11 +122,13 @@ export default function Login() {
             placeholder="••••••••"
             placeholderTextColor="#94A3B8"
             secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="password"
             value={password}
-            onChangeText={setPassword}
-            editable={!loading}
+            onChangeText={(text) => setPassword(text)}
           />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
             <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={18} color="#64748B" />
           </TouchableOpacity>
         </View>
@@ -132,7 +136,7 @@ export default function Login() {
         {/* Login Button */}
         <TouchableOpacity
           style={[styles.loginButton, loading && { opacity: 0.7 }]}
-          onPress={() => handleLogin()}
+          onPress={handleLogin}
           disabled={loading}
         >
           {loading ? (
@@ -141,8 +145,6 @@ export default function Login() {
             <Text style={styles.loginText}>Log In →</Text>
           )}
         </TouchableOpacity>
-
-
 
         {/* Signup Link */}
         <TouchableOpacity
@@ -247,15 +249,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   inputIcon: {
-    fontSize: 16,
     marginRight: 10,
   },
   input: {
     flex: 1,
-    height: "100%",
+    height: 48,
     color: "#0F172A",
     fontSize: 15,
     paddingVertical: 0,
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
   eyeIcon: {
     fontSize: 16,
