@@ -119,21 +119,22 @@ export default function AvailableBusesScreen() {
     setSuccessModalVisible(true);
   };
 
-  // Proceed to Checkout from Success Pop-up
+  // Proceed to Checkout / Payment from Success Pop-up
   const handleProceedToCheckout = () => {
     setSuccessModalVisible(false);
     if (!selectedBus || !chosenSeat) return;
 
     router.push({
-      pathname: "../checkout",
+      pathname: "/payment",
       params: {
         busId: selectedBus.id,
         agency: selectedBus.agency,
-        seatNumber: chosenSeat,
-        price: selectedBus.price,
+        seats: `${chosenSeat}`,
+        totalAmount: selectedBus.price,
         from: params.from || "Yaoundé",
         to: params.to || "Douala",
-        passenger: params.passenger || "Passenger",
+        depart: params.depart || "Today",
+        primaryPassengerName: params.passenger || "Passenger",
       },
     });
   };
