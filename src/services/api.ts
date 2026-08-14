@@ -206,6 +206,7 @@ export interface CreateBookingParams {
   seats: string[];
   paymentMethod: string;
   paymentAccount?: string;
+  receiptImage?: string;
   passengers?: Array<{
     seatId: string;
     fullName: string;

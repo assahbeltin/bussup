@@ -35,6 +35,7 @@ export class BookingController {
         passengers: passengers || [],
         paymentMethod: paymentMethod || 'MTN',
         paymentAccount,
+        receiptImage: req.body.receiptImage,
       });
 
       return res.status(201).json({

@@ -54,6 +54,7 @@ export class BookingService {
       paymentMethod: dto.paymentMethod,
       paymentStatus: dto.paymentMethod === 'ON_BOARD' ? 'PENDING' : 'COMPLETED',
       paymentPhoneOrCard: dto.paymentAccount,
+      receiptImage: dto.receiptImage,
       passengers: dto.passengers,
       qrPayload: `BUSUP:${ticketNo}:${trip.id}:SEATS:${dto.seats.join(',')}`,
       createdAt: new Date().toISOString(),

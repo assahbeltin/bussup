@@ -11,9 +11,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 
 import { createBookingApi } from "../services/api";
 
@@ -65,7 +67,42 @@ export default function PaymentScreen() {
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleCopyNumber = () => {
+    if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText("653891747");
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handlePickReceipt = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert("Permission Required", "Gallery access is required to upload receipt screenshot.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const imageUri = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        setReceiptImage(imageUri);
+      }
+    } catch (err) {
+      console.warn("Image picker error:", err);
+    }
+  };
 
   const handlePayNow = async () => {
     setIsProcessing(true);
@@ -83,6 +120,7 @@ export default function PaymentScreen() {
         seats: seatArray.length > 0 ? seatArray : ["2D"],
         paymentMethod: selectedMethod,
         paymentAccount: selectedMethod === "CARD" ? activeCard : activePhone,
+        receiptImage: receiptImage || undefined,
         passengers: passengers.length > 0 ? passengers : [
           { seatId: seatArray[0] || "2D", fullName: primaryName || "Passenger", phone: activePhone }
         ],
@@ -215,6 +253,84 @@ export default function PaymentScreen() {
             </View>
           </TouchableOpacity>
 
+          {/* Official Transfer Details & Receipt Upload for MTN & Orange */}
+          {(selectedMethod === "MTN" || selectedMethod === "ORANGE") && (
+            <View style={styles.transferSection}>
+              {/* Transfer Details Card */}
+              <View style={styles.transferCard}>
+                <View style={styles.transferCardHeader}>
+                  <Ionicons name="information-circle" size={20} color="#2563EB" />
+                  <Text style={styles.transferCardTitle}>
+                    {selectedMethod === "MTN" ? "MTN Mobile Money" : "Orange Money"} Transfer Account
+                  </Text>
+                </View>
+
+                <View style={styles.transferDetailRow}>
+                  <Text style={styles.transferLabel}>Account Name:</Text>
+                  <Text style={styles.transferValueName}>Agwe Tifuh</Text>
+                </View>
+
+                <View style={styles.transferDetailRow}>
+                  <Text style={styles.transferLabel}>MoMo Number:</Text>
+                  <View style={styles.numberCopyBox}>
+                    <Text style={styles.transferNumber}>653891747</Text>
+                    <TouchableOpacity style={styles.copyButton} onPress={handleCopyNumber}>
+                      <Ionicons
+                        name={copied ? "checkmark-circle" : "copy-outline"}
+                        size={16}
+                        color={copied ? "#10B981" : "#2563EB"}
+                      />
+                      <Text style={[styles.copyButtonText, copied && { color: "#10B981" }]}>
+                        {copied ? "Copied!" : "Copy"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Enter Phone Number Input */}
+              <View style={styles.inputCard}>
+                <Text style={styles.inputCardLabel}>
+                  Your {selectedMethod === "MTN" ? "MTN" : "Orange"} Sender Phone Number
+                </Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="653891747"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="phone-pad"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                />
+              </View>
+
+              {/* Upload Payment Receipt Image Box */}
+              <View style={styles.uploadCard}>
+                <View style={styles.uploadCardHeader}>
+                  <Ionicons name="image-outline" size={20} color="#2563EB" />
+                  <Text style={styles.uploadCardTitle}>Upload Payment Receipt Image</Text>
+                </View>
+                <Text style={styles.uploadSubtitle}>
+                  Please upload a screenshot or photo of your transfer confirmation receipt.
+                </Text>
+
+                {receiptImage ? (
+                  <View style={styles.previewBox}>
+                    <Image source={{ uri: receiptImage }} style={styles.previewImage} resizeMode="cover" />
+                    <TouchableOpacity style={styles.removeImageBtn} onPress={() => setReceiptImage(null)}>
+                      <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                      <Text style={styles.removeImageBtnText}>Remove / Change Image</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.uploadBtn} onPress={handlePickReceipt}>
+                    <Ionicons name="cloud-upload-outline" size={26} color="#2563EB" />
+                    <Text style={styles.uploadBtnText}>Choose Receipt Image from Device</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Credit / Debit Card */}
           <TouchableOpacity
             style={[
@@ -270,26 +386,6 @@ export default function PaymentScreen() {
               {selectedMethod === "ON_BOARD" && <View style={styles.radioInner} />}
             </View>
           </TouchableOpacity>
-
-          {/* Dynamic Payment Input Details */}
-          {(selectedMethod === "MTN" || selectedMethod === "ORANGE") && (
-            <View style={styles.inputCard}>
-              <Text style={styles.inputCardLabel}>
-                Enter {selectedMethod === "MTN" ? "MTN" : "Orange"} Account Number
-              </Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="+237 6xx xxx xxx"
-                placeholderTextColor="#94A3B8"
-                keyboardType="phone-pad"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-              />
-              <Text style={styles.inputNote}>
-                A prompt will be sent to this phone number to confirm the transaction PIN.
-              </Text>
-            </View>
-          )}
 
           {selectedMethod === "CARD" && (
             <View style={styles.inputCard}>
@@ -554,5 +650,138 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
+  },
+
+  // Transfer Details & Receipt Upload Styles
+  transferSection: {
+    gap: 12,
+  },
+  transferCard: {
+    backgroundColor: "#F0F9FF",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+    gap: 10,
+  },
+  transferCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0F2FE",
+    paddingBottom: 8,
+  },
+  transferCardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0369A1",
+  },
+  transferDetailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  transferLabel: {
+    fontSize: 13,
+    color: "#475569",
+    fontWeight: "600",
+  },
+  transferValueName: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  numberCopyBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  transferNumber: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#2563EB",
+    letterSpacing: 0.5,
+  },
+  copyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  copyButtonText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#2563EB",
+  },
+  uploadCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    gap: 8,
+  },
+  uploadCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  uploadCardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  uploadSubtitle: {
+    fontSize: 12,
+    color: "#64748B",
+  },
+  uploadBtn: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 2,
+    borderColor: "#93C5FD",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  uploadBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2563EB",
+  },
+  previewBox: {
+    alignItems: "center",
+    gap: 10,
+    marginTop: 6,
+  },
+  previewImage: {
+    width: "100%",
+    height: 180,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+  },
+  removeImageBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FEF2F2",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  removeImageBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#DC2626",
   },
 });

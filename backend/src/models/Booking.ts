@@ -30,6 +30,7 @@ export interface Booking {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   paymentPhoneOrCard?: string;
+  receiptImage?: string;
   passengers: PassengerInfo[];
   qrPayload: string;
   createdAt: string;
@@ -42,4 +43,5 @@ export interface CreateBookingDTO {
   passengers: PassengerInfo[];
   paymentMethod: PaymentMethod;
   paymentAccount?: string; // Phone number for MoMo or Card number
+  receiptImage?: string;
 }

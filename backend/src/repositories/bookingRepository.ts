@@ -25,6 +25,7 @@ export class BookingRepository {
         payment_method: booking.paymentMethod,
         payment_status: booking.paymentStatus,
         payment_phone_or_card: booking.paymentPhoneOrCard || null,
+        receipt_image: booking.receiptImage || null,
         qr_payload: booking.qrPayload,
         created_at: booking.createdAt,
       };
@@ -33,22 +34,27 @@ export class BookingRepository {
 
       if (!bookingError) {
         console.log(`[Supabase] Successfully saved booking ${booking.ticketNo} to Supabase bookings table`);
-        if (booking.passengers && booking.passengers.length > 0) {
-          const passengerRows = booking.passengers.map((p) => ({
-            booking_id: booking.id,
-            seat_id: p.seatId,
-            full_name: p.fullName,
-            phone: p.phone,
-            email: p.email,
-            age: p.age,
-          }));
-          await supabase.from('passengers').insert(passengerRows);
-        }
-        memoryStore.bookings.push(booking);
-        return booking;
       } else {
-        console.warn('[Supabase] Insert error for booking:', bookingError.message);
+        console.warn('[Supabase] Insert error for booking, trying fallback without extra column:', bookingError.message);
+        const fallbackBooking = { ...supabaseBooking };
+        delete (fallbackBooking as any).receipt_image;
+        await supabase.from('bookings').insert(fallbackBooking);
       }
+
+      if (booking.passengers && booking.passengers.length > 0) {
+        const passengerRows = booking.passengers.map((p) => ({
+          booking_id: booking.id,
+          seat_id: p.seatId,
+          full_name: p.fullName,
+          phone: p.phone,
+          email: p.email,
+          age: p.age,
+        }));
+        await supabase.from('passengers').insert(passengerRows);
+      }
+
+      memoryStore.bookings.push(booking);
+      return booking;
     } catch (err) {
       console.warn('[Supabase] Insert exception for booking:', (err as Error).message);
     }
@@ -142,6 +148,7 @@ export class BookingRepository {
             paymentMethod: b.payment_method,
             paymentStatus: b.payment_status,
             paymentPhoneOrCard: b.payment_phone_or_card,
+            receiptImage: b.receipt_image || b.receiptImage,
             passengers: Array.isArray(b.passengers)
               ? b.passengers.map((p: any) => ({
                   seatId: p.seat_id,
@@ -194,6 +201,7 @@ export class BookingRepository {
           paymentMethod: data.payment_method,
           paymentStatus: data.payment_status,
           paymentPhoneOrCard: data.payment_phone_or_card,
+          receiptImage: data.receipt_image || data.receiptImage,
           passengers: Array.isArray(data.passengers)
             ? data.passengers.map((p: any) => ({
                 seatId: p.seat_id,
@@ -278,6 +286,7 @@ export class BookingRepository {
           paymentMethod: b.payment_method,
           paymentStatus: b.payment_status,
           paymentPhoneOrCard: b.payment_phone_or_card,
+          receiptImage: b.receipt_image || b.receiptImage || memoryStore.bookings.find((m: any) => m.id === b.id || m.ticketNo === b.ticket_no)?.receiptImage,
           passengers: Array.isArray(b.passengers)
             ? b.passengers.map((p: any) => ({
                 seatId: p.seat_id,

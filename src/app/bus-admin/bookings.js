@@ -12,6 +12,7 @@ import {
   Alert,
   RefreshControl,
   Platform,
+  Image,
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import AdminLayout from './AdminLayout';
@@ -32,6 +33,7 @@ export default function BookingsManagementScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
   const [expandedBookingId, setExpandedBookingId] = useState(null);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
 
   // Manual User Registration Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -403,6 +405,15 @@ export default function BookingsManagementScreen() {
                     <Text style={styles.detailText}>
                       Payment: {booking.paymentMethod} ({booking.paymentStatus}) • Phone/Acc: {pPhone}
                     </Text>
+                    {booking.receiptImage && (
+                      <TouchableOpacity
+                        style={styles.viewProofBtn}
+                        onPress={() => setSelectedReceipt(booking.receiptImage)}
+                      >
+                        <MaterialIcons name="image" size={14} color="#2563EB" />
+                        <Text style={styles.viewProofBtnText}>View Receipt Proof</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
 
                   {/* Detailed Passenger Information Toggle */}
@@ -565,6 +576,23 @@ export default function BookingsManagementScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* Payment Receipt Image Modal */}
+      {selectedReceipt && (
+        <Modal transparent visible animationType="fade">
+          <View style={styles.receiptModalOverlay}>
+            <View style={styles.receiptModalCard}>
+              <View style={styles.receiptModalHeader}>
+                <Text style={styles.receiptModalTitle}>Payment Receipt Proof</Text>
+                <TouchableOpacity onPress={() => setSelectedReceipt(null)}>
+                  <MaterialIcons name="close" size={24} color="#0F172A" />
+                </TouchableOpacity>
+              </View>
+              <Image source={{ uri: selectedReceipt }} style={styles.fullReceiptImg} resizeMode="contain" />
+            </View>
+          </View>
+        </Modal>
+      )}
     </AdminLayout>
   );
 }
@@ -648,4 +676,11 @@ const styles = StyleSheet.create({
   payMethodChipSelected: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
   payMethodText: { fontSize: 11, fontWeight: '700', color: '#64748B' },
   payMethodTextSelected: { color: '#FFFFFF' },
+  viewProofBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginLeft: 8, gap: 2 },
+  viewProofBtnText: { fontSize: 11, fontWeight: '700', color: '#2563EB' },
+  receiptModalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.75)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  receiptModalCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, width: '100%', maxWidth: 480, maxHeight: '80%' },
+  receiptModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  receiptModalTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  fullReceiptImg: { width: '100%', height: 360, borderRadius: 8 },
 });

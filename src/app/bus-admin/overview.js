@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
+  Image,
+  Modal,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -16,6 +18,7 @@ import { getAdminDashboardApi } from '../../services/api';
 export default function AdminOverviewScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [kpis, setKpis] = useState({
     totalRevenueFormatted: '0 FCFA',
     activeBookingsCount: 0,
@@ -154,15 +157,27 @@ export default function AdminOverviewScreen() {
                       </View>
                       <View style={styles.rowEnd}>
                         <Text style={styles.amountText}>{item.totalAmountFormatted || `${item.totalAmountFCFA} FCFA`}</Text>
-                        <View
-                          style={[
-                            styles.statusChip,
-                            item.status === 'Confirmed' && styles.chipConfirmed,
-                            item.status === 'Processing' && styles.chipProcessing,
-                            item.status === 'Cancelled' && styles.chipCancelled,
-                          ]}
-                        >
-                          <Text style={styles.chipText}>{item.status}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View
+                            style={[
+                              styles.statusChip,
+                              item.status === 'Confirmed' && styles.chipConfirmed,
+                              item.status === 'Processing' && styles.chipProcessing,
+                              item.status === 'Cancelled' && styles.chipCancelled,
+                            ]}
+                          >
+                            <Text style={styles.chipText}>{item.status}</Text>
+                          </View>
+
+                          {item.receiptImage && (
+                            <TouchableOpacity
+                              style={styles.receiptBadge}
+                              onPress={() => setSelectedReceipt(item.receiptImage)}
+                            >
+                              <MaterialIcons name="receipt-long" size={14} color="#2563EB" />
+                              <Text style={styles.receiptBadgeText}>Proof</Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
                       </View>
                     </View>
@@ -170,6 +185,23 @@ export default function AdminOverviewScreen() {
                 )}
               </View>
             </>
+          )}
+
+          {/* Receipt Proof Preview Modal */}
+          {selectedReceipt && (
+            <Modal transparent visible animationType="fade">
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalCard}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Payment Receipt Proof</Text>
+                    <TouchableOpacity onPress={() => setSelectedReceipt(null)}>
+                      <MaterialIcons name="close" size={24} color="#0F172A" />
+                    </TouchableOpacity>
+                  </View>
+                  <Image source={{ uri: selectedReceipt }} style={styles.fullReceiptImage} resizeMode="contain" />
+                </View>
+              </View>
+            </Modal>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -217,4 +249,11 @@ const styles = StyleSheet.create({
   chipProcessing: { backgroundColor: '#FEF3C7' },
   chipCancelled: { backgroundColor: '#FEE2E2' },
   chipText: { fontSize: 10, fontWeight: '700', color: '#1E293B' },
+  receiptBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, gap: 2 },
+  receiptBadgeText: { fontSize: 10, fontWeight: '700', color: '#2563EB' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.75)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, width: '100%', maxWidth: 480, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  modalTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  fullReceiptImage: { width: '100%', height: 350, borderRadius: 8 },
 });
